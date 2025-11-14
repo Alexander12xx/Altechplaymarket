@@ -1,0 +1,257 @@
+# Digital Forecast Hub - .htaccess Configuration
+# URL rewriting, security, and performance optimizations
+
+# Enable URL rewriting
+RewriteEngine On
+
+# Security headers
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header always set X-Content-Type-Options nosniff
+
+    # XSS protection
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Prevent clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # HSTS (uncomment for production HTTPS)
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Content Security Policy (basic version)
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self'"
+
+    # Cache control for static assets
+    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # Cache control for HTML files
+    <FilesMatch "\.(html|php)$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+</IfModule>
+
+# PHP configuration
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log logs/php_errors.log
+    php_value max_execution_time 30
+    php_value memory_limit 128M
+    php_value upload_max_filesize 5M
+    php_value post_max_size 6M
+    php_value session.cookie_httponly On
+    php_value session.cookie_secure Off
+    php_value session.use_strict_mode On
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log logs/php_errors.log
+    php_value max_execution_time 30
+    php_value memory_limit 128M
+    php_value upload_max_filesize 5M
+    php_value post_max_size 6M
+    php_value session.cookie_httponly On
+    php_value session.cookie_secure Off
+    php_value session.use_strict_mode On
+</IfModule>
+
+# URL rewriting rules
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Handle clean URLs for pages
+RewriteRule ^pages/([^/]+)/?$ pages/$1.php [L,QSA]
+
+# Handle admin pages
+RewriteRule ^admin/([^/]+)/?$ pages/admin/$1.php [L,QSA]
+RewriteRule ^admin/?$ pages/admin/dashboard.php [L,QSA]
+
+# Handle API endpoints
+RewriteRule ^api/([^/]+)/?$ api/$1.php [L,QSA]
+RewriteRule ^api/?$ api/index.php [L,QSA]
+
+# Handle assets
+RewriteRule ^assets/css/([^/]+)/?$ assets/css/$1.css [L,QSA]
+RewriteRule ^assets/js/([^/]+)/?$ assets/js/$1.js [L,QSA]
+RewriteRule ^assets/images/([^/]+)/?$ assets/images/$1 [L,QSA]
+
+# Handle uploads
+RewriteRule ^uploads/(avatars|ads)/([^/]+)/?$ uploads/$1/$2 [L,QSA]
+
+# Default route
+RewriteRule ^/?$ pages/index.php [L,QSA]
+
+# Security rules
+
+# Block access to sensitive files and directories
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "(^\.htaccess|config\.php|constants\.php|database\.php)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_dir.c>
+    DirectoryIndex index.php index.html
+</IfModule>
+
+# Block access to logs directory
+<Directory "logs">
+    Order allow,deny
+    Deny from all
+</Directory>
+
+# Prevent access to backup files
+<FilesMatch "\.(bak|backup|old|tmp|log|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# IP blocking (optional - uncomment and add your rules)
+# Order allow,deny
+# Deny from 192.168.1.100
+# Allow from all
+
+# Custom error pages
+ErrorDocument 404 /pages/404.php
+ErrorDocument 403 /pages/403.php
+ErrorDocument 500 /pages/500.php
+
+# Compression
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject
+    AddOutputFilterByType DEFLATE application/x-font
+    AddOutputFilterByType DEFLATE application/x-font-opentype
+    AddOutputFilterByType DEFLATE application/x-font-otf
+    AddOutputFilterByType DEFLATE application/x-font-truetype
+    AddOutputFilterByType DEFLATE application/x-font-ttf
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE font/opentype
+    AddOutputFilterByType DEFLATE font/otf
+    AddOutputFilterByType DEFLATE font/ttf
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE image/x-icon
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/xml
+
+    # Remove browser bugs (only needed for really old browsers)
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    Header append Vary User-Agent
+</IfModule>
+
+# Expiration headers
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+
+    # Video and audio
+    ExpiresByType video/mp4 "access plus 1 year"
+    ExpiresByType audio/ogg "access plus 1 year"
+    ExpiresByType audio/mp3 "access plus 1 year"
+
+    # Fonts
+    ExpiresByType font/eot "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType application/x-javascript "access plus 1 year"
+
+    # HTML
+    ExpiresByType text/html "access plus 1 hour"
+</IfModule>
+
+# Environment variables
+SetEnv APP_ENV "production"
+SetEnv HTTP_MOD_REWRITE On
+
+# Force HTTPS (uncomment for production)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST%{REQUEST_URI} [L,R=301]
+
+# Remove www prefix (optional)
+# RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+# RewriteRule ^(.*)$ https://%1/$1 [L,R=301]
+
+# File upload size limit
+LimitRequestBody 5242880
+
+# Protect against common attacks
+<IfModule mod_rewrite.c>
+    # Block bad user agents
+    RewriteCond %{HTTP_USER_AGENT} ^Scrapy [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^Java [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^Nutch [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^Python-urllib [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^libwww
+    RewriteRule .* - [F,L]
+
+    # Block request methods
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|CONNECT)
+    RewriteRule .* - [F,L]
+
+    # Prevent SQL injection
+    RewriteCond %{QUERY_STRING} (union|select|insert|update|delete|drop|create|alter|exec|script) [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# Performance settings
+<IfModule mod_negotiation.c>
+    Options -MultiViews
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType text/javascript .js
+    AddType application/json .json
+    AddType image/svg+xml .svg
+    AddType font/woff .woff
+    AddType font/woff2 .woff2
+    AddType application/x-font-ttf .ttf
+    AddType application/x-font-otf .otf
+</IfModule>
+
+# Directory listing
+Options -Indexes
+
+# Server signature
+ServerTokens Prod
+ServerSignature Off
+
+# Enable CORS for API (if needed)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(php)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+        Header set Access-Control-Allow-Credentials "true"
+    </FilesMatch>
+</IfModule>
